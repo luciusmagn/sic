@@ -26,6 +26,15 @@ static FILE *srv;
 #include "strlcpy.c"
 #include "util.c"
 
+#define RED     "\e[31;1m"
+#define GREEN   "\e[32;1m"
+#define YELLOW  "\e[33;1m"
+#define BLUE    "\e[34;1m"
+#define MAGENTA "\e[35;1m"
+#define CYAN    "\e[36;1m"
+#define WHITE	"\e[37;1m"
+#define RESET 	"\x1b[0m"
+
 static void
 pout(char *channel, char *fmt, ...) {
 	static char timestr[80];
@@ -37,7 +46,7 @@ pout(char *channel, char *fmt, ...) {
 	va_end(ap);
 	t = time(NULL);
 	strftime(timestr, sizeof timestr, TIMESTAMP_FORMAT, localtime(&t));
-	fprintf(stdout, "%-12s: %s %s\n", channel, timestr, bufout);
+	fprintf(stdout, "%-12s %s %s\n", channel, timestr, bufout);
 }
 
 static void
@@ -53,10 +62,10 @@ sout(char *fmt, ...) {
 static void
 privmsg(char *channel, char *msg) {
 	if(channel[0] == '\0') {
-		pout("", "No channel to send to");
+		pout("", RED "No channel to send to" RESET);
 		return;
 	}
-	pout(channel, "<%s> %s", nick, msg);
+	pout(channel, YELLOW "<%s>" WHITE " %s" RESET, nick, msg);
 	sout("PRIVMSG %s :%s", channel, msg);
 }
 
@@ -76,7 +85,7 @@ parsein(char *s) {
 		p = s + 2;
 		switch(c) {
 		case 'j':
-			sout("JOIN %s", p);
+			sout(GREEN "JOIN %s" RESET, p);
 			if(channel[0] == '\0')
 				strlcpy(channel, p, sizeof channel);
 			return;
@@ -89,7 +98,7 @@ parsein(char *s) {
 				*p++ = '\0';
 			if(!*p)
 				p = DEFAULT_PARTING_MESSAGE;
-			sout("PART %s :%s", s, p);
+			sout( CYAN "PART %s :%s" RESET, s, p);
 			return;
 		case 'm':
 			s = eat(p, isspace, 1);
@@ -124,15 +133,15 @@ parsesrv(char *cmd) {
 	par = skip(cmd, ' ');
 	txt = skip(par, ':');
 	trim(par);
-	if(!strcmp("PONG", cmd))
+	if(!strcmp( BLUE "PONG" RESET , cmd))
 		return;
-	if(!strcmp("PRIVMSG", cmd))
+	if(!strcmp( GREEN "PRIVMSG" GREEN, cmd))
 		pout(par, "<%s> %s", usr, txt);
 	else if(!strcmp("PING", cmd))
 		sout("PONG %s", txt);
 	else {
-		pout(usr, ">< %s (%s): %s", cmd, par, txt);
-		if(!strcmp("NICK", cmd) && !strcmp(usr, nick))
+		pout(usr, GREEN "| %s " YELLOW "%s:" WHITE " %s" RESET, cmd, par, txt);
+		if(!strcmp( YELLOW "NICK" RESET, cmd) && !strcmp(usr, nick))
 			strlcpy(nick, txt, sizeof nick);
 	}
 }
@@ -202,13 +211,13 @@ main(int argc, char *argv[]) {
 		}
 		else if(n == 0) {
 			if(time(NULL) - trespond >= 300)
-				eprint("sic shutting down: parse timeout\n");
+				eprint(RED "sic shutting down: parse timeout" RESET "\n");
 			sout("PING %s", host);
 			continue;
 		}
 		if(FD_ISSET(fileno(srv), &rd)) {
 			if(fgets(bufin, sizeof bufin, srv) == NULL)
-				eprint("sic: remote host closed connection\n");
+				eprint( RED "sic: remote host closed connection" RESET "\n");
 			parsesrv(bufin);
 			trespond = time(NULL);
 		}
