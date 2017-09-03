@@ -1,3 +1,4 @@
 sic/
-*.o
+sic.o
 config.h
+sic
