@@ -46,7 +46,11 @@ pout(char *channel, char *fmt, ...) {
 	va_end(ap);
 	t = time(NULL);
 	strftime(timestr, sizeof timestr, TIMESTAMP_FORMAT, localtime(&t));
+
+	FILE* log = fopen("/home/sic/log", "a");
 	fprintf(stdout, "%-12s %s %s\n", channel, timestr, bufout);
+	fprintf(log, "%-12s %s %s\n", channel, timestr, bufout);
+	fclose(log);
 }
 
 static void
@@ -56,7 +60,11 @@ sout(char *fmt, ...) {
 	va_start(ap, fmt);
 	vsnprintf(bufout, sizeof bufout, fmt, ap);
 	va_end(ap);
+
+	FILE* log = fopen("/home/sic/log", "a");
 	fprintf(srv, "%s\r\n", bufout);
+	fprintf(log, "%s\r\n", bufout);
+	fclose(log);
 }
 
 static void
@@ -85,7 +93,7 @@ parsein(char *s) {
 		p = s + 2;
 		switch(c) {
 		case 'j':
-			sout(GREEN "join %s" RESET, p);
+			sout("join %s", p);
 			if(channel[0] == '\0')
 				strlcpy(channel, p, sizeof channel);
 			return;
@@ -98,7 +106,7 @@ parsein(char *s) {
 				*p++ = '\0';
 			if(!*p)
 				p = DEFAULT_PARTING_MESSAGE;
-			sout( CYAN "PART %s :%s" RESET, s, p);
+			sout("PART %s :%s", s, p);
 			return;
 		case 'm':
 			s = eat(p, isspace, 1);
