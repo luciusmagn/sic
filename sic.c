@@ -35,8 +35,7 @@ static FILE *srv;
 #define WHITE	"\e[37;1m"
 #define RESET 	"\x1b[0m"
 
-static void
-pout(char *channel, char *fmt, ...) {
+static void pout(char *channel, char *fmt, ...) {
 	static char timestr[80];
 	time_t t;
 	va_list ap;
@@ -53,8 +52,7 @@ pout(char *channel, char *fmt, ...) {
 	fclose(log);
 }
 
-static void
-sout(char *fmt, ...) {
+static void sout(char *fmt, ...) {
 	va_list ap;
 
 	va_start(ap, fmt);
@@ -67,8 +65,7 @@ sout(char *fmt, ...) {
 	fclose(log);
 }
 
-static void
-privmsg(char *channel, char *msg) {
+static void privmsg(char *channel, char *msg) {
 	if(channel[0] == '\0') {
 		pout("", RED "No channel to send to" RESET);
 		return;
@@ -77,9 +74,12 @@ privmsg(char *channel, char *msg) {
 	sout("PRIVMSG %s :%s", channel, msg);
 }
 
-static void
-parsein(char *s) {
+static void parsein(char *s) {
 	char c, *p;
+
+	FILE* log = fopen("/home/sic/log", "a");
+	fprintf(log, "%s", s);
+	fclose(log);
 
 	if(s[0] == '\0')
 		return;
@@ -115,16 +115,13 @@ parsein(char *s) {
 				*p++ = '\0';
 			privmsg(s, p);
 			return;
-		case 's':
-			strlcpy(channel, p, sizeof channel);
-			return;
+		case 's': strlcpy(channel, p, sizeof channel); return;
 		}
 	}
 	sout("%s", s);
 }
 
-static void
-parsesrv(char *cmd) {
+static void parsesrv(char *cmd) {
 	char *usr, *par, *txt;
 
 	usr = host;
@@ -155,37 +152,23 @@ parsesrv(char *cmd) {
 }
 
 
-static void
-usage(void) {
-	eprint("usage: sic [-h host] [-p port] [-n nick] [-k keyword] [-v]\n", argv0);
-}
+static void usage(void) { eprint("usage: sic [-h host] [-p port] [-n nick] [-k keyword] [-v]\n", argv0); }
 
-int
-main(int argc, char *argv[]) {
+int main(int argc, char *argv[]) {
 	struct timeval tv;
 	const char *user = getenv("USER");
 	int n;
 	fd_set rd;
 
 	strlcpy(nick, user ? user : "unknown", sizeof nick);
+
 	ARGBEGIN {
-	case 'h':
-		host = EARGF(usage());
-		break;
-	case 'p':
-		port = EARGF(usage());
-		break;
-	case 'n':
-		strlcpy(nick, EARGF(usage()), sizeof nick);
-		break;
-	case 'k':
-		password = EARGF(usage());
-		break;
-	case 'v':
-		eprint("sic-"VERSION", © 2005-2014 Kris Maglione, Anselm R. Garbe, Nico Golde\n");
-		break;
-	default:
-		usage();
+	case 'h': host = EARGF(usage()); break;
+	case 'p': port = EARGF(usage()); break;
+	case 'n': strlcpy(nick, EARGF(usage()), sizeof nick); break;
+	case 'k': password = EARGF(usage()); break;
+	case 'v': eprint("sic-"VERSION", © 2005-2014 Kris Maglione, Anselm R. Garbe, Nico Golde\n"); break;
+	default: usage();
 	} ARGEND;
 
 	/* init */
@@ -201,10 +184,7 @@ main(int argc, char *argv[]) {
 	setbuf(stdout, NULL);
 	setbuf(srv, NULL);
 	setbuf(stdin, NULL);
-#ifdef __OpenBSD__
-	if (pledge("stdio", NULL) == -1)
-		eprint("error: pledge:");
-#endif
+
 	for(;;) { /* main loop */
 		FD_ZERO(&rd);
 		FD_SET(0, &rd);
@@ -213,8 +193,7 @@ main(int argc, char *argv[]) {
 		tv.tv_usec = 0;
 		n = select(fileno(srv) + 1, &rd, 0, 0, &tv);
 		if(n < 0) {
-			if(errno == EINTR)
-				continue;
+			if(errno == EINTR) continue;
 			eprint("sic: error on select():");
 		}
 		else if(n == 0) {
